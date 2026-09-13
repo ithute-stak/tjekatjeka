@@ -79,7 +79,7 @@ services:
       TJEKATJEKA_BACKEND_INTERNAL_URL: http://backend:8204
       TJEKATJEKA_AUTH_ISSUER: ${TJEKATJEKA_AUTH_ISSUER:-https://auth.ithute.co.ls}
       TJEKATJEKA_AUTH_CLIENT_ID: ${TJEKATJEKA_AUTH_CLIENT_ID:-tjekatjeka}
-      TJEKATJEKA_OIDC_REDIRECT_URI: ${TJEKATJEKA_OIDC_REDIRECT_URI:-https://tjekane.ihute.co.ls/api/auth/oidc/callback}
+      TJEKATJEKA_OIDC_REDIRECT_URI: ${TJEKATJEKA_OIDC_REDIRECT_URI:-https://tjekane.ithute.co.ls/api/auth/oidc/callback}
       TJEKATJEKA_COOKIE_SECURE: "true"
       TJEKATJEKA_DEV_AUTH_BYPASS: "false"
     depends_on:
