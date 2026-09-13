@@ -53,18 +53,21 @@ CADDY_CONTAINER="$(docker ps --filter label=com.docker.compose.project=ithute --
 test -n "$DNS_CONTAINER"
 test -n "$CADDY_CONTAINER"
 
-# PowerDNS 4.9 uses the legacy pdnsutil command names. Keep the record names
-# absolute (trailing dot) so the zone is not appended a second time.
-docker exec "$DNS_CONTAINER" pdnsutil delete-rrset ithute.co.ls tjekane.ihute.co.ls.ithute.co.ls. A >/dev/null 2>&1 || true
-docker exec "$DNS_CONTAINER" pdnsutil replace-rrset ithute.co.ls tjekane.ihute.co.ls. A 300 "$DEPLOY_IPV4"
+# DNS for ithute.co.ls is managed centrally. Product deployments must not
+# create or rewrite authoritative records. Verify the existing Tjekatjeka A
+# record instead, regardless of its configured TTL.
 docker exec "$DNS_CONTAINER" pdnsutil check-zone ithute.co.ls >/dev/null
 ZONE_RECORDS="$(docker exec "$DNS_CONTAINER" pdnsutil list-zone ithute.co.ls)"
-printf '%s\n' "$ZONE_RECORDS" | grep -Eq '^tjekane\.ihute\.co\.ls\.?[[:space:]]+300[[:space:]]+IN[[:space:]]+A[[:space:]]+'
-if printf '%s\n' "$ZONE_RECORDS" | grep -Fq 'tjekane.ihute.co.ls.ithute.co.ls'; then
-  echo "Stale malformed Tjekatjeka DNS record still exists" >&2
+CORRECT_RECORD="$(printf '%s\n' "$ZONE_RECORDS" | grep -E '^tjekane\.ihute\.co\.ls\.?[[:space:]]+[0-9]+[[:space:]]+IN[[:space:]]+A[[:space:]]+' | grep -F "$DEPLOY_IPV4" || true)"
+if [ -z "$CORRECT_RECORD" ]; then
+  echo "Expected authoritative A record tjekane.ihute.co.ls -> $DEPLOY_IPV4 is missing" >&2
+  printf '%s\n' "$ZONE_RECORDS" | grep -F 'tjekane' || true
   exit 1
 fi
-echo "Tjekatjeka DNS A record reconciled"
+if printf '%s\n' "$ZONE_RECORDS" | grep -Fq 'tjekane.ihute.co.ls.ithute.co.ls'; then
+  echo "Warning: legacy malformed DNS record tjekane.ihute.co.ls.ithute.co.ls still exists; it is not used by the application."
+fi
+echo "Existing Tjekatjeka authoritative DNS A record verified"
 
 # Product routes are deliberately owned by product repositories and persisted
 # in the central Caddy data volume.
