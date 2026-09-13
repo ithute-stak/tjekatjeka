@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./advanced.css";
+import "./enterprise.css";
 
 export const metadata: Metadata = {
   title: "Tjekatjeka Holdings",
-  description: "Operations, production, inventory, finance and fleet management for Tjekatjeka Holdings.",
+  description: "Enterprise operations, production, inventory, finance, people, governance and fleet management for Tjekatjeka Holdings.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
