@@ -28,6 +28,7 @@ jobs:
     env:
       TJEKATJEKA_DATABASE_URL: postgresql+psycopg://tjekatjeka:tjekatjeka-test@127.0.0.1:5432/tjekatjeka_test
       TJEKATJEKA_DEV_AUTH_BYPASS: "true"
+      TJEKATJEKA_DOCUMENT_STORAGE_PATH: /tmp/tjekatjeka-documents
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
