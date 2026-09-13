@@ -1,7 +1,7 @@
 import uuid
 from collections.abc import Callable
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -24,6 +24,27 @@ ALLOWED_ROLES = {
     "driver",
     "viewer",
 }
+
+WRITE_PERMISSIONS = [
+    ("/api/v1/materials", {"admin", "director", "manager", "brick_manager", "aluminium_manager", "storekeeper"}),
+    ("/api/v1/purchases", {"admin", "director", "manager", "accountant", "storekeeper"}),
+    ("/api/v1/expenses", {"admin", "director", "manager", "accountant"}),
+    ("/api/v1/production", {"admin", "director", "manager", "brick_manager"}),
+    ("/api/v1/aluminium-jobs", {"admin", "director", "manager", "aluminium_manager", "sales"}),
+    ("/api/v1/vehicles", {"admin", "director", "manager", "fleet_manager"}),
+    ("/api/v1/fuel", {"admin", "director", "manager", "fleet_manager", "driver"}),
+    ("/api/v1/maintenance", {"admin", "director", "manager", "fleet_manager"}),
+    ("/api/v1/sales", {"admin", "director", "manager", "accountant", "sales"}),
+    ("/api/v1/customers", {"admin", "director", "manager", "accountant", "sales"}),
+    ("/api/v1/customer-invoices", {"admin", "director", "manager", "accountant", "sales"}),
+    ("/api/v1/customer-payments", {"admin", "director", "manager", "accountant"}),
+    ("/api/v1/suppliers", {"admin", "director", "manager", "accountant", "storekeeper"}),
+    ("/api/v1/supplier-bills", {"admin", "director", "manager", "accountant"}),
+    ("/api/v1/supplier-payments", {"admin", "director", "manager", "accountant"}),
+    ("/api/v1/brick-recipes", {"admin", "director", "manager", "brick_manager"}),
+    ("/api/v1/aluminium-measurements", {"admin", "director", "manager", "aluminium_manager"}),
+    ("/api/v1/deliveries", {"admin", "director", "manager", "fleet_manager", "driver", "sales"}),
+]
 
 
 def current_profile(
@@ -58,3 +79,17 @@ def require_roles(*roles: str) -> Callable:
         return profile
 
     return dependency
+
+
+def enforce_route_permission(request: Request, profile: Profile = Depends(current_profile)) -> Profile:
+    if request.method in {"GET", "HEAD", "OPTIONS"}:
+        return profile
+    path = request.url.path
+    allowed = {"admin", "director", "manager"}
+    for prefix, roles in WRITE_PERMISSIONS:
+        if path.startswith(prefix):
+            allowed = roles
+            break
+    if profile.role not in allowed:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your Tjekatjeka role cannot modify this module")
+    return profile
