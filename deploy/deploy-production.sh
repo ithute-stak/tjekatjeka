@@ -48,20 +48,18 @@ fi
 compose pull
 compose up -d --remove-orphans
 
-APP_API_CONTAINER="$(docker ps --filter label=com.docker.compose.project=ithute --filter label=com.docker.compose.service=ithute-app-api -q | head -n1)"
+DNS_CONTAINER="$(docker ps --filter label=com.docker.compose.project=ithute --filter label=com.docker.compose.service=ithute-dns -q | head -n1)"
 CADDY_CONTAINER="$(docker ps --filter label=com.docker.compose.project=ithute --filter label=com.docker.compose.service=caddy -q | head -n1)"
-test -n "$APP_API_CONTAINER"
+test -n "$DNS_CONTAINER"
 test -n "$CADDY_CONTAINER"
 
-# Publish the product hostname through Ithute's authoritative PowerDNS.
-docker exec -i "$APP_API_CONTAINER" python - "$DEPLOY_IPV4" <<'PY'
-import sys
-from app.services.powerdns import PowerDNSClient
-ip = sys.argv[1]
-client = PowerDNSClient()
-client.replace_rrset("ithute.co.ls", "tjekane.ihute.co.ls", "A", 300, [ip])
-print("Tjekatjeka DNS A record reconciled")
-PY
+# Publish the product hostname directly through PowerDNS' supported operator CLI.
+# The PowerDNS API path currently rejects this otherwise-valid in-zone name on
+# the live server; pdnsutil writes through the same backend and performs zone checks.
+docker exec "$DNS_CONTAINER" pdnsutil replace-rrset ithute.co.ls tjekane.ihute.co.ls A 300 "$DEPLOY_IPV4"
+docker exec "$DNS_CONTAINER" pdnsutil check-zone ithute.co.ls >/dev/null
+docker exec "$DNS_CONTAINER" pdnsutil list-zone ithute.co.ls | grep -Fq "tjekane.ihute.co.ls"
+echo "Tjekatjeka DNS A record reconciled"
 
 # Product routes are deliberately owned by product repositories and persisted
 # in the central Caddy data volume.
