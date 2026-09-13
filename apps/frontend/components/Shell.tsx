@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const nav = [
-  ["/", "Overview"],
+  ["/dashboard", "Overview"],
   ["/commercial", "Commercial"],
   ["/inventory", "Inventory"],
   ["/purchasing", "Purchasing"],
@@ -19,38 +19,27 @@ const nav = [
   ["/governance", "Governance"],
 ];
 
-export function Shell({ children, active = "/" }: { children: React.ReactNode; active?: string }) {
+export function Shell({ children, active = "/dashboard" }: { children: React.ReactNode; active?: string }) {
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">TJ</div>
-          <div>
-            <strong>Tjekatjeka</strong>
-            <span>Holdings Management</span>
-          </div>
+          <div><strong>Tjekatjeka</strong><span>Holdings Management</span></div>
         </div>
         <nav>
           {nav.map(([href, label]) => (
-            <Link key={href} className={active === href ? "nav-link active" : "nav-link"} href={href}>
-              <span className="nav-dot" />
-              {label}
-            </Link>
+            <Link key={href} className={active === href ? "nav-link active" : "nav-link"} href={href}><span className="nav-dot" />{label}</Link>
           ))}
         </nav>
-        <div className="sidebar-foot">
-          <span>Two divisions. One control centre.</span>
-          <small>Powered by !thute</small>
-        </div>
+        <div className="sidebar-foot"><span>Two divisions. One control centre.</span><small>Powered by !thute</small></div>
       </aside>
       <main className="main-panel">
         <header className="topbar">
-          <div>
-            <span className="eyebrow">Tjekatjeka Holdings</span>
-            <strong>Enterprise Operations Control Centre</strong>
-          </div>
+          <div><span className="eyebrow">Tjekatjeka Holdings</span><strong>Enterprise Operations Control Centre</strong></div>
           <div className="topbar-actions">
             <span className="status-pill"><i /> System online</span>
+            <form action="/api/auth/logout" method="post"><button className="logout-button" type="submit">Sign out</button></form>
             <div className="avatar">TH</div>
           </div>
         </header>
