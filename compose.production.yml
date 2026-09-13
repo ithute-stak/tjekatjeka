@@ -73,6 +73,8 @@ services:
     restart: unless-stopped
     init: true
     environment:
+      PORT: "3204"
+      HOSTNAME: "0.0.0.0"
       TJEKATJEKA_PUBLIC_URL: ${TJEKATJEKA_PUBLIC_URL:?TJEKATJEKA_PUBLIC_URL is required}
       TJEKATJEKA_BACKEND_INTERNAL_URL: http://backend:8204
       TJEKATJEKA_AUTH_ISSUER: ${TJEKATJEKA_AUTH_ISSUER:-https://auth.ithute.co.ls}
