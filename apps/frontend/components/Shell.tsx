@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const nav = [
   ["/", "Overview"],
+  ["/commercial", "Commercial"],
   ["/inventory", "Inventory"],
   ["/purchasing", "Purchasing"],
   ["/production", "Brick Production"],
@@ -12,7 +13,10 @@ const nav = [
   ["/deliveries", "Deliveries"],
   ["/accounts", "Customer & Supplier Accounts"],
   ["/finance", "Finance"],
+  ["/ledger", "Ledger & Banking"],
   ["/fleet", "Fleet"],
+  ["/people", "People & Payroll"],
+  ["/governance", "Governance"],
 ];
 
 export function Shell({ children, active = "/" }: { children: React.ReactNode; active?: string }) {
@@ -43,7 +47,7 @@ export function Shell({ children, active = "/" }: { children: React.ReactNode; a
         <header className="topbar">
           <div>
             <span className="eyebrow">Tjekatjeka Holdings</span>
-            <strong>Operations Control Centre</strong>
+            <strong>Enterprise Operations Control Centre</strong>
           </div>
           <div className="topbar-actions">
             <span className="status-pill"><i /> System online</span>
