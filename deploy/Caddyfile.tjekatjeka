@@ -1,4 +1,4 @@
-tjekane.ihute.co.ls {
+tjekane.ithute.co.ls {
     encode zstd gzip
     header X-Tjekatjeka-Service "frontend"
     header X-Content-Type-Options "nosniff"
