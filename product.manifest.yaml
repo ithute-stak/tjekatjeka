@@ -1,0 +1,26 @@
+product:
+  id: tjekatjeka
+  name: Tjekatjeka Holdings Management System
+  owner: Tjekatjeka Holdings
+  platform: Ithute Solutions
+  frontend_port: 3204
+  backend_port: 8204
+  auth:
+    provider: ithute-auth
+    client_id: tjekatjeka
+    audience: tjekatjeka
+  data:
+    database: dedicated-postgresql
+    redis: dedicated-product-local
+  modules:
+    - dashboard
+    - brick-production
+    - raw-materials
+    - finished-stock
+    - aluminium-jobs
+    - purchases
+    - expenses
+    - sales
+    - fleet
+    - fuel
+    - maintenance

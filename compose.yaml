@@ -1,0 +1,75 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tjekatjeka
+      POSTGRES_USER: tjekatjeka
+      POSTGRES_PASSWORD: ${TJEKATJEKA_DB_PASSWORD:-change-me}
+    volumes:
+      - tjekatjeka_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tjekatjeka -d tjekatjeka"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    volumes:
+      - tjekatjeka_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ./apps/backend
+    restart: unless-stopped
+    environment:
+      TJEKATJEKA_DATABASE_URL: ${TJEKATJEKA_DATABASE_URL:-postgresql+psycopg://tjekatjeka:change-me@db:5432/tjekatjeka}
+      TJEKATJEKA_REDIS_URL: ${TJEKATJEKA_REDIS_URL:-redis://redis:6379/0}
+      TJEKATJEKA_AUTH_ISSUER: ${TJEKATJEKA_AUTH_ISSUER:-https://auth.ithute.co.ls}
+      TJEKATJEKA_AUTH_AUDIENCE: ${TJEKATJEKA_AUTH_AUDIENCE:-tjekatjeka}
+      TJEKATJEKA_BOOTSTRAP_ADMIN_EMAIL: ${TJEKATJEKA_BOOTSTRAP_ADMIN_EMAIL:-}
+      TJEKATJEKA_DEV_AUTH_BYPASS: ${TJEKATJEKA_DEV_AUTH_BYPASS:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8204"
+    ports:
+      - "${TJEKATJEKA_BACKEND_PORT:-8204}:8204"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8204/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  frontend:
+    build:
+      context: ./apps/frontend
+    restart: unless-stopped
+    environment:
+      TJEKATJEKA_PUBLIC_URL: ${TJEKATJEKA_PUBLIC_URL:-http://localhost:3204}
+      TJEKATJEKA_BACKEND_INTERNAL_URL: ${TJEKATJEKA_BACKEND_INTERNAL_URL:-http://backend:8204}
+      TJEKATJEKA_AUTH_ISSUER: ${TJEKATJEKA_AUTH_ISSUER:-https://auth.ithute.co.ls}
+      TJEKATJEKA_AUTH_CLIENT_ID: ${TJEKATJEKA_AUTH_CLIENT_ID:-tjekatjeka}
+      TJEKATJEKA_OIDC_REDIRECT_URI: ${TJEKATJEKA_OIDC_REDIRECT_URI:-http://localhost:3204/api/auth/oidc/callback}
+      TJEKATJEKA_COOKIE_SECURE: ${TJEKATJEKA_COOKIE_SECURE:-false}
+      TJEKATJEKA_DEV_AUTH_BYPASS: ${TJEKATJEKA_DEV_AUTH_BYPASS:-false}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${TJEKATJEKA_FRONTEND_PORT:-3204}:3204"
+
+volumes:
+  tjekatjeka_db:
+  tjekatjeka_redis:

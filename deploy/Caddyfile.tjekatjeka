@@ -1,0 +1,12 @@
+{$TJEKATJEKA_DOMAIN} {
+    encode zstd gzip
+
+    @backend path /api/v1/* /healthz /readyz /docs* /openapi.json
+    handle @backend {
+        reverse_proxy 127.0.0.1:8204
+    }
+
+    handle {
+        reverse_proxy 127.0.0.1:3204
+    }
+}
