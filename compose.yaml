@@ -36,6 +36,9 @@ services:
       TJEKATJEKA_AUTH_AUDIENCE: ${TJEKATJEKA_AUTH_AUDIENCE:-tjekatjeka}
       TJEKATJEKA_BOOTSTRAP_ADMIN_EMAIL: ${TJEKATJEKA_BOOTSTRAP_ADMIN_EMAIL:-}
       TJEKATJEKA_DEV_AUTH_BYPASS: ${TJEKATJEKA_DEV_AUTH_BYPASS:-false}
+      TJEKATJEKA_DOCUMENT_STORAGE_PATH: ${TJEKATJEKA_DOCUMENT_STORAGE_PATH:-/data/documents}
+    volumes:
+      - tjekatjeka_documents:/data/documents
     depends_on:
       db:
         condition: service_healthy
@@ -73,3 +76,4 @@ services:
 volumes:
   tjekatjeka_db:
   tjekatjeka_redis:
+  tjekatjeka_documents:
