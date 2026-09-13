@@ -23,11 +23,11 @@ fi
 
 cat > .env.production <<EOF
 TJEKATJEKA_DB_PASSWORD=$DB_PASSWORD
-TJEKATJEKA_PUBLIC_URL=https://tjekane.ihute.co.ls
+TJEKATJEKA_PUBLIC_URL=https://tjekane.ithute.co.ls
 TJEKATJEKA_AUTH_ISSUER=https://auth.ithute.co.ls
 TJEKATJEKA_AUTH_AUDIENCE=tjekatjeka
 TJEKATJEKA_AUTH_CLIENT_ID=tjekatjeka
-TJEKATJEKA_OIDC_REDIRECT_URI=https://tjekane.ihute.co.ls/api/auth/oidc/callback
+TJEKATJEKA_OIDC_REDIRECT_URI=https://tjekane.ithute.co.ls/api/auth/oidc/callback
 TJEKATJEKA_COOKIE_SECURE=true
 TJEKATJEKA_BOOTSTRAP_ADMIN_EMAIL=$OWNER_EMAIL
 TJEKATJEKA_DEV_AUTH_BYPASS=false
@@ -58,14 +58,14 @@ test -n "$CADDY_CONTAINER"
 # record instead, regardless of its configured TTL.
 docker exec "$DNS_CONTAINER" pdnsutil check-zone ithute.co.ls >/dev/null
 ZONE_RECORDS="$(docker exec "$DNS_CONTAINER" pdnsutil list-zone ithute.co.ls)"
-CORRECT_RECORD="$(printf '%s\n' "$ZONE_RECORDS" | grep -E '^tjekane\.ihute\.co\.ls\.?[[:space:]]+[0-9]+[[:space:]]+IN[[:space:]]+A[[:space:]]+' | grep -F "$DEPLOY_IPV4" || true)"
+CORRECT_RECORD="$(printf '%s\n' "$ZONE_RECORDS" | grep -E '^tjekane\.ithute\.co\.ls\.?[[:space:]]+[0-9]+[[:space:]]+IN[[:space:]]+A[[:space:]]+' | grep -F "$DEPLOY_IPV4" || true)"
 if [ -z "$CORRECT_RECORD" ]; then
-  echo "Expected authoritative A record tjekane.ihute.co.ls -> $DEPLOY_IPV4 is missing" >&2
+  echo "Expected authoritative A record tjekane.ithute.co.ls -> $DEPLOY_IPV4 is missing" >&2
   printf '%s\n' "$ZONE_RECORDS" | grep -F 'tjekane' || true
   exit 1
 fi
 if printf '%s\n' "$ZONE_RECORDS" | grep -Fq 'tjekane.ihute.co.ls.ithute.co.ls'; then
-  echo "Warning: legacy malformed DNS record tjekane.ihute.co.ls.ithute.co.ls still exists; it is not used by the application."
+  echo "Warning: legacy malformed Tjekatjeka DNS record tjekane.ihute.co.ls.ithute.co.ls still exists; it is not used by the application."
 fi
 echo "Existing Tjekatjeka authoritative DNS A record verified"
 
