@@ -1,0 +1,136 @@
+name: Deploy Tjekatjeka Production
+
+on:
+  workflow_run:
+    workflows: ["Tjekatjeka CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tjekatjeka-vps-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_SSH_PASSPHRASE: ${{ secrets.VPS_SSH_PASSPHRASE }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      OWNER_EMAIL: thekoetlisi@tjekatjeka.co.ls
+      PUBLIC_DOMAIN: tjekane.ihute.co.ls
+
+    steps:
+      - name: Checkout validated commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+          persist-credentials: false
+
+      - name: Validate deployment inputs
+        run: |
+          set -euo pipefail
+          for name in VPS_HOST VPS_USER VPS_APP_DIR VPS_SSH_KEY GHCR_USERNAME GHCR_TOKEN; do
+            value="${!name:-}"
+            if [ -z "$value" ]; then
+              echo "$name is required" >&2
+              exit 1
+            fi
+          done
+          DEPLOY_IPV4="$(python3 - <<'PY'
+          import os, socket
+          print(socket.gethostbyname(os.environ['VPS_HOST']))
+          PY
+          )"
+          python3 - "$DEPLOY_IPV4" <<'PY'
+          import ipaddress, sys
+          ipaddress.IPv4Address(sys.argv[1])
+          PY
+          echo "DEPLOY_IPV4=$DEPLOY_IPV4" >> "$GITHUB_ENV"
+
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/tjekatjeka_deploy"
+          chmod 600 "$HOME/.ssh/tjekatjeka_deploy"
+          eval "$(ssh-agent -s)"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          if [ -n "${VPS_SSH_PASSPHRASE:-}" ]; then
+            cat > /tmp/tjekatjeka-askpass.sh <<'SH'
+          #!/usr/bin/env sh
+          printf '%s\n' "$VPS_SSH_PASSPHRASE"
+          SH
+            chmod 700 /tmp/tjekatjeka-askpass.sh
+            SSH_ASKPASS=/tmp/tjekatjeka-askpass.sh SSH_ASKPASS_REQUIRE=force DISPLAY=:0 setsid -w ssh-add "$HOME/.ssh/tjekatjeka_deploy" </dev/null
+            rm -f /tmp/tjekatjeka-askpass.sh
+          else
+            ssh-add "$HOME/.ssh/tjekatjeka_deploy" </dev/null
+          fi
+          ssh-keyscan -T 10 -H "$VPS_HOST" >> "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          ssh "${VPS_USER}@${VPS_HOST}" 'docker version >/dev/null && docker compose version >/dev/null'
+
+      - name: Build and push immutable production images
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+          backend_image="ghcr.io/ithute-stak/tjekatjeka-backend:$DEPLOY_SHA"
+          frontend_image="ghcr.io/ithute-stak/tjekatjeka-frontend:$DEPLOY_SHA"
+          docker build --pull -t "$backend_image" apps/backend
+          docker build --pull -t "$frontend_image" apps/frontend
+          docker push "$backend_image"
+          docker push "$frontend_image"
+
+      - name: Upload production runtime files
+        run: |
+          set -euo pipefail
+          remote="${VPS_USER}@${VPS_HOST}"
+          tar -czf "/tmp/tjekatjeka-runtime-${DEPLOY_SHA}.tgz" \
+            compose.production.yml \
+            deploy/Caddyfile.tjekatjeka \
+            deploy/provision_tjekatjeka_auth.py \
+            deploy/deploy-production.sh
+          ssh "$remote" "mkdir -p '$VPS_APP_DIR'"
+          scp "/tmp/tjekatjeka-runtime-${DEPLOY_SHA}.tgz" "$remote:/tmp/tjekatjeka-runtime-${DEPLOY_SHA}.tgz"
+          ssh "$remote" "tar -xzf '/tmp/tjekatjeka-runtime-${DEPLOY_SHA}.tgz' -C '$VPS_APP_DIR' && rm -f '/tmp/tjekatjeka-runtime-${DEPLOY_SHA}.tgz' && chmod 700 '$VPS_APP_DIR/deploy/deploy-production.sh'"
+
+      - name: Authenticate VPS to GHCR
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | ssh "${VPS_USER}@${VPS_HOST}" "docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin"
+
+      - name: Deploy runtime, publish DNS and reload Caddy
+        run: |
+          set -euo pipefail
+          ssh "${VPS_USER}@${VPS_HOST}" \
+            "APP_DIR='$VPS_APP_DIR' DEPLOY_SHA='$DEPLOY_SHA' DEPLOY_IPV4='$DEPLOY_IPV4' OWNER_EMAIL='$OWNER_EMAIL' bash '$VPS_APP_DIR/deploy/deploy-production.sh'"
+
+      - name: Verify public HTTPS login page
+        run: |
+          set -euo pipefail
+          base="https://${PUBLIC_DOMAIN}"
+          resolve="${PUBLIC_DOMAIN}:443:${DEPLOY_IPV4}"
+          for attempt in $(seq 1 24); do
+            if curl --resolve "$resolve" --connect-timeout 8 -fsS "$base/" -o /tmp/tjekatjeka-login.html && grep -q 'Sign in to Tjekatjeka' /tmp/tjekatjeka-login.html; then
+              echo "Tjekatjeka is live at $base"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Tjekatjeka public HTTPS login page did not become ready.' >&2
+          exit 1
