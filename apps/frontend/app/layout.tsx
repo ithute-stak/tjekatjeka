@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./advanced.css";
 import "./enterprise.css";
+import "./desktop-compat.css";
 
 export const metadata: Metadata = {
   title: "Tjekatjeka Holdings",
