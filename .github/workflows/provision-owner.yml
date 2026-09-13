@@ -1,0 +1,57 @@
+name: Provision Tjekatjeka Owner
+
+on:
+  workflow_run:
+    workflows: ["Deploy Tjekatjeka Production"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_SSH_PASSPHRASE: ${{ secrets.VPS_SSH_PASSPHRASE }}
+      OWNER_PASSWORD: ${{ secrets.SYSTEM_OWNER_PASSWORD }}
+      OWNER_EMAIL: thekoetlisi@tjekatjeka.co.ls
+
+    steps:
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+          test -n "$OWNER_PASSWORD"
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/tjekatjeka_deploy"
+          chmod 600 "$HOME/.ssh/tjekatjeka_deploy"
+          eval "$(ssh-agent -s)"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          if [ -n "${VPS_SSH_PASSPHRASE:-}" ]; then
+            cat > /tmp/tjekatjeka-askpass.sh <<'SH'
+          #!/usr/bin/env sh
+          printf '%s\n' "$VPS_SSH_PASSPHRASE"
+          SH
+            chmod 700 /tmp/tjekatjeka-askpass.sh
+            SSH_ASKPASS=/tmp/tjekatjeka-askpass.sh SSH_ASKPASS_REQUIRE=force DISPLAY=:0 setsid -w ssh-add "$HOME/.ssh/tjekatjeka_deploy" </dev/null
+            rm -f /tmp/tjekatjeka-askpass.sh
+          else
+            ssh-add "$HOME/.ssh/tjekatjeka_deploy" </dev/null
+          fi
+          ssh-keyscan -T 10 -H "$VPS_HOST" >> "$HOME/.ssh/known_hosts"
+
+      - name: Provision central Auth account without logging the password
+        run: |
+          set -euo pipefail
+          remote="${VPS_USER}@${VPS_HOST}"
+          printf '%s' "$OWNER_PASSWORD" | ssh "$remote" \
+            "AUTH_CONTAINER=\$(docker ps --filter label=com.docker.compose.project=ithute --filter label=com.docker.compose.service=ithute-auth -q | head -n1); test -n \"\$AUTH_CONTAINER\"; docker cp '$VPS_APP_DIR/deploy/provision_tjekatjeka_auth.py' \"\$AUTH_CONTAINER:/tmp/provision_tjekatjeka_auth.py\"; docker exec -i -e TJEKATJEKA_ADMIN_EMAIL='$OWNER_EMAIL' \"\$AUTH_CONTAINER\" python /tmp/provision_tjekatjeka_auth.py; docker exec \"\$AUTH_CONTAINER\" rm -f /tmp/provision_tjekatjeka_auth.py"
