@@ -3,6 +3,7 @@ import "./globals.css";
 import "./advanced.css";
 import "./enterprise.css";
 import "./desktop-compat.css";
+import "./login.css";
 
 export const metadata: Metadata = {
   title: "Tjekatjeka Holdings",
