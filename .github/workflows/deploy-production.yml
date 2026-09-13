@@ -30,7 +30,7 @@ jobs:
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       OWNER_EMAIL: thekoetlisi@tjekatjeka.co.ls
-      PUBLIC_DOMAIN: tjekane.ihute.co.ls
+      PUBLIC_DOMAIN: tjekane.ithute.co.ls
 
     steps:
       - name: Checkout validated commit
@@ -114,7 +114,7 @@ jobs:
           set -euo pipefail
           printf '%s' "$GHCR_TOKEN" | ssh "${VPS_USER}@${VPS_HOST}" "docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin"
 
-      - name: Deploy runtime, publish DNS and reload Caddy
+      - name: Deploy runtime, verify DNS and reload Caddy
         run: |
           set -euo pipefail
           ssh "${VPS_USER}@${VPS_HOST}" \
