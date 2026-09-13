@@ -1,6 +1,7 @@
 from sqlalchemy import select
 
 from .db import SessionLocal
+from .enterprise_finance_models import LedgerAccount
 from .models import Branch, Material, Product
 
 
@@ -16,6 +17,20 @@ ALUMINIUM_MATERIALS = [
     ("GLASS-6MM", "6mm clear glass", "glass", "m2", 10),
     ("SILICONE", "Silicone", "consumable", "tube", 10),
     ("HARDWARE", "Locks, handles & hardware", "hardware", "piece", 20),
+]
+
+DEFAULT_LEDGER_ACCOUNTS = [
+    ("1000", "Cash and bank", "asset"),
+    ("1100", "Accounts receivable", "asset"),
+    ("1200", "Inventory", "asset"),
+    ("2000", "Accounts payable", "liability"),
+    ("3000", "Owner equity", "equity"),
+    ("4000", "Sales revenue", "income"),
+    ("4100", "Delivery revenue", "income"),
+    ("5000", "Cost of goods sold", "expense"),
+    ("5100", "Operating expenses", "expense"),
+    ("5200", "Payroll expense", "expense"),
+    ("5300", "Fleet expense", "expense"),
 ]
 
 
@@ -52,5 +67,10 @@ def seed_reference_data() -> None:
             exists = db.scalar(select(Product).where(Product.branch_id == brick.id, Product.code == code))
             if exists is None:
                 db.add(Product(branch_id=brick.id, code=code, name=name, unit="each", selling_price=price))
+
+        for code, name, account_type in DEFAULT_LEDGER_ACCOUNTS:
+            exists = db.scalar(select(LedgerAccount).where(LedgerAccount.code == code))
+            if exists is None:
+                db.add(LedgerAccount(code=code, name=name, account_type=account_type))
 
         db.commit()
