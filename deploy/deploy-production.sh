@@ -53,14 +53,13 @@ CADDY_CONTAINER="$(docker ps --filter label=com.docker.compose.project=ithute --
 test -n "$DNS_CONTAINER"
 test -n "$CADDY_CONTAINER"
 
-# Publish the product hostname as an absolute DNS name. The trailing dot is
-# deliberate: without it the previous pdnsutil invocation appended the zone
-# name and created tjekane.ihute.co.ls.ithute.co.ls.
-docker exec "$DNS_CONTAINER" pdnsutil rrset delete ithute.co.ls tjekane.ihute.co.ls.ithute.co.ls. A >/dev/null 2>&1 || true
-docker exec "$DNS_CONTAINER" pdnsutil rrset replace ithute.co.ls tjekane.ihute.co.ls. A 300 "$DEPLOY_IPV4"
-docker exec "$DNS_CONTAINER" pdnsutil zone check ithute.co.ls >/dev/null
-ZONE_RECORDS="$(docker exec "$DNS_CONTAINER" pdnsutil zone list ithute.co.ls)"
-printf '%s\n' "$ZONE_RECORDS" | grep -Eq '^tjekane\.ihute\.co\.ls\.?[[:space:]]+300[[:space:]]+IN[[:space:]]+A[[:space:]]+' 
+# PowerDNS 4.9 uses the legacy pdnsutil command names. Keep the record names
+# absolute (trailing dot) so the zone is not appended a second time.
+docker exec "$DNS_CONTAINER" pdnsutil delete-rrset ithute.co.ls tjekane.ihute.co.ls.ithute.co.ls. A >/dev/null 2>&1 || true
+docker exec "$DNS_CONTAINER" pdnsutil replace-rrset ithute.co.ls tjekane.ihute.co.ls. A 300 "$DEPLOY_IPV4"
+docker exec "$DNS_CONTAINER" pdnsutil check-zone ithute.co.ls >/dev/null
+ZONE_RECORDS="$(docker exec "$DNS_CONTAINER" pdnsutil list-zone ithute.co.ls)"
+printf '%s\n' "$ZONE_RECORDS" | grep -Eq '^tjekane\.ihute\.co\.ls\.?[[:space:]]+300[[:space:]]+IN[[:space:]]+A[[:space:]]+'
 if printf '%s\n' "$ZONE_RECORDS" | grep -Fq 'tjekane.ihute.co.ls.ithute.co.ls'; then
   echo "Stale malformed Tjekatjeka DNS record still exists" >&2
   exit 1
