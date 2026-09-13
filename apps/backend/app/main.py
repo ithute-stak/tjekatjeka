@@ -1,13 +1,15 @@
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from redis import Redis
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from .advanced import router as advanced_router
 from .auth import current_claims
+from .authorization import authorize_api_request
 from .config import settings
 from .db import engine, get_db
 from .enterprise_admin import router as enterprise_admin_router
@@ -29,6 +31,17 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def api_access_boundary(request: Request, call_next):
+    try:
+        authorize_api_request(request)
+    except HTTPException as exc:
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return await call_next(request)
+
+
 app.include_router(operations_router)
 app.include_router(advanced_router)
 app.include_router(enterprise_finance_router)
