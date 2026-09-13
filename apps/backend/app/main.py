@@ -10,6 +10,8 @@ from .advanced import router as advanced_router
 from .auth import current_claims
 from .config import settings
 from .db import engine, get_db
+from .enterprise_admin import router as enterprise_admin_router
+from .enterprise_finance import router as enterprise_finance_router
 from .models import Profile
 from .operations import router as operations_router
 from .seed import seed_reference_data
@@ -23,12 +25,14 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Tjekatjeka Holdings API",
-    version="1.1.0",
+    version="2.0.0",
     redoc_url=None,
     lifespan=lifespan,
 )
 app.include_router(operations_router)
 app.include_router(advanced_router)
+app.include_router(enterprise_finance_router)
+app.include_router(enterprise_admin_router)
 
 
 @app.get("/healthz")
