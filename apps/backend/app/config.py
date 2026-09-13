@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     auth_audience: str = Field(default="tjekatjeka", validation_alias="TJEKATJEKA_AUTH_AUDIENCE")
     bootstrap_admin_email: str = Field(default="", validation_alias="TJEKATJEKA_BOOTSTRAP_ADMIN_EMAIL")
     dev_auth_bypass: bool = Field(default=False, validation_alias="TJEKATJEKA_DEV_AUTH_BYPASS")
+    document_storage_path: str = Field(default="/data/documents", validation_alias="TJEKATJEKA_DOCUMENT_STORAGE_PATH")
 
 
 settings = Settings()
