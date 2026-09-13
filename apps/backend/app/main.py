@@ -6,6 +6,7 @@ from redis import Redis
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
+from .advanced import router as advanced_router
 from .auth import current_claims
 from .config import settings
 from .db import engine, get_db
@@ -22,11 +23,12 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Tjekatjeka Holdings API",
-    version="1.0.0",
+    version="1.1.0",
     redoc_url=None,
     lifespan=lifespan,
 )
 app.include_router(operations_router)
+app.include_router(advanced_router)
 
 
 @app.get("/healthz")
