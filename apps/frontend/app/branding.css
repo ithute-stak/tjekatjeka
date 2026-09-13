@@ -1,0 +1,8 @@
+.brand-logo-image,.login-brand-logo{display:block;object-fit:cover;object-position:center;background:#173246;border:1px solid rgba(255,255,255,.18)}
+.brand-logo-image{width:46px;height:46px;flex:0 0 46px;border-radius:14px;box-shadow:0 8px 30px rgba(7,22,30,.28)}
+.login-brand-logo{width:52px;height:52px;flex:0 0 52px;border-radius:14px;box-shadow:0 10px 34px rgba(0,0,0,.22)}
+.login-brand-panel{position:relative;overflow:hidden;isolation:isolate}
+.login-brand-panel::after{content:"";position:absolute;width:min(430px,68%);aspect-ratio:1;right:-82px;bottom:82px;border-radius:34px;background:linear-gradient(rgba(16,38,27,.28),rgba(16,38,27,.28)),url("/brand/tjekatjeka-brand.webp") center/cover no-repeat;opacity:.18;transform:rotate(-6deg);box-shadow:0 35px 80px rgba(0,0,0,.2);z-index:0;pointer-events:none}
+.login-brand-panel>*{position:relative;z-index:1}
+@media(max-width:1100px) and (min-width:761px){.brand-logo-image{width:42px;height:42px;flex-basis:42px;border-radius:12px}.login-brand-panel::after{width:min(300px,64%);right:-70px;bottom:110px;opacity:.13}}
+@media(max-height:800px) and (min-width:761px){.login-brand-panel::after{width:245px;right:-58px;bottom:72px;opacity:.1}.login-brand-logo{width:46px;height:46px;flex-basis:46px;border-radius:12px}}

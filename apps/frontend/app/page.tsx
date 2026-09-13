@@ -23,7 +23,10 @@ export default async function LoginPage({ searchParams }: PageProps) {
   return (
     <main className="login-shell">
       <section className="login-brand-panel">
-        <div className="login-brand-lockup"><span className="login-mark">TJ</span><div><strong>Tjekatjeka Holdings</strong><small>Enterprise Operations Control Centre</small></div></div>
+        <div className="login-brand-lockup">
+          <img className="login-brand-logo" src="/brand/tjekatjeka-brand.webp" alt="Tjekatjeka Aluminium Works" />
+          <div><strong>Tjekatjeka Holdings</strong><small>Enterprise Operations Control Centre</small></div>
+        </div>
         <div className="login-brand-copy"><span className="eyebrow">One company. One control centre.</span><h1>Manage production, aluminium, finance, people and fleet operations from one place.</h1><p>Tjekatjeka uses central !thute Auth for identity while keeping its business data in its own protected database.</p></div>
         <div className="login-brand-footer">Powered by <strong>!thute</strong></div>
       </section>

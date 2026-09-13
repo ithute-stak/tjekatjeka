@@ -24,7 +24,7 @@ export function Shell({ children, active = "/dashboard" }: { children: React.Rea
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">TJ</div>
+          <img className="brand-logo-image" src="/brand/tjekatjeka-brand.webp" alt="Tjekatjeka Aluminium Works" />
           <div><strong>Tjekatjeka</strong><span>Holdings Management</span></div>
         </div>
         <nav>
