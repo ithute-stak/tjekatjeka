@@ -8,9 +8,26 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: tjekatjeka_test
+          POSTGRES_USER: tjekatjeka
+          POSTGRES_PASSWORD: tjekatjeka-test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tjekatjeka -d tjekatjeka_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     defaults:
       run:
         working-directory: apps/backend
+    env:
+      TJEKATJEKA_DATABASE_URL: postgresql+psycopg://tjekatjeka:tjekatjeka-test@127.0.0.1:5432/tjekatjeka_test
+      TJEKATJEKA_DEV_AUTH_BYPASS: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -18,6 +35,8 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: python -m compileall -q app alembic
+      - run: alembic upgrade head
+      - run: alembic current
       - run: PYTHONPATH=. pytest -q
 
   frontend:
