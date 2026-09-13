@@ -5,8 +5,12 @@ const nav = [
   ["/inventory", "Inventory"],
   ["/purchasing", "Purchasing"],
   ["/production", "Brick Production"],
+  ["/standards", "Recipes & Variance"],
   ["/aluminium", "Aluminium & Glass"],
+  ["/measurements", "Measurements"],
   ["/sales", "Sales"],
+  ["/deliveries", "Deliveries"],
+  ["/accounts", "Customer & Supplier Accounts"],
   ["/finance", "Finance"],
   ["/fleet", "Fleet"],
 ];
