@@ -9,7 +9,7 @@ on:
 
 concurrency:
   group: tjekatjeka-vps-production
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
