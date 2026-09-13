@@ -1,0 +1,106 @@
+name: tjekatjeka
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tjekatjeka
+      POSTGRES_USER: tjekatjeka
+      POSTGRES_PASSWORD: ${TJEKATJEKA_DB_PASSWORD:?TJEKATJEKA_DB_PASSWORD is required}
+    volumes:
+      - tjekatjeka_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tjekatjeka -d tjekatjeka"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [default]
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - tjekatjeka_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [default]
+
+  documents-init:
+    image: alpine:3.22
+    restart: "no"
+    command: ["sh", "-c", "mkdir -p /data/documents && chown -R 10001:10001 /data/documents"]
+    volumes:
+      - tjekatjeka_documents:/data/documents
+    networks: [default]
+
+  backend:
+    image: ghcr.io/ithute-stak/tjekatjeka-backend:${TJEKATJEKA_IMAGE_TAG:?TJEKATJEKA_IMAGE_TAG is required}
+    restart: unless-stopped
+    init: true
+    environment:
+      TJEKATJEKA_DATABASE_URL: postgresql+psycopg://tjekatjeka:${TJEKATJEKA_DB_PASSWORD}@db:5432/tjekatjeka
+      TJEKATJEKA_REDIS_URL: redis://redis:6379/0
+      TJEKATJEKA_AUTH_ISSUER: ${TJEKATJEKA_AUTH_ISSUER:-https://auth.ithute.co.ls}
+      TJEKATJEKA_AUTH_AUDIENCE: ${TJEKATJEKA_AUTH_AUDIENCE:-tjekatjeka}
+      TJEKATJEKA_BOOTSTRAP_ADMIN_EMAIL: ${TJEKATJEKA_BOOTSTRAP_ADMIN_EMAIL:?TJEKATJEKA_BOOTSTRAP_ADMIN_EMAIL is required}
+      TJEKATJEKA_DEV_AUTH_BYPASS: "false"
+      TJEKATJEKA_DOCUMENT_STORAGE_PATH: /data/documents
+    volumes:
+      - tjekatjeka_documents:/data/documents
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      documents-init:
+        condition: service_completed_successfully
+    command: ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8204 --proxy-headers"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8204/readyz', timeout=4).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    networks: [default]
+
+  frontend:
+    image: ghcr.io/ithute-stak/tjekatjeka-frontend:${TJEKATJEKA_IMAGE_TAG:?TJEKATJEKA_IMAGE_TAG is required}
+    restart: unless-stopped
+    init: true
+    environment:
+      TJEKATJEKA_PUBLIC_URL: ${TJEKATJEKA_PUBLIC_URL:?TJEKATJEKA_PUBLIC_URL is required}
+      TJEKATJEKA_BACKEND_INTERNAL_URL: http://backend:8204
+      TJEKATJEKA_AUTH_ISSUER: ${TJEKATJEKA_AUTH_ISSUER:-https://auth.ithute.co.ls}
+      TJEKATJEKA_AUTH_CLIENT_ID: ${TJEKATJEKA_AUTH_CLIENT_ID:-tjekatjeka}
+      TJEKATJEKA_OIDC_REDIRECT_URI: ${TJEKATJEKA_OIDC_REDIRECT_URI:-https://tjekane.ihute.co.ls/api/auth/oidc/callback}
+      TJEKATJEKA_COOKIE_SECURE: "true"
+      TJEKATJEKA_DEV_AUTH_BYPASS: "false"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3204/ | grep -q 'Sign in to Tjekatjeka'"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    networks:
+      default: {}
+      ithute_public:
+        aliases:
+          - tjekatjeka-frontend
+
+volumes:
+  tjekatjeka_db:
+  tjekatjeka_redis:
+  tjekatjeka_documents:
+
+networks:
+  ithute_public:
+    external: true
+    name: ithute_ithute
