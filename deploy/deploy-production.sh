@@ -6,19 +6,11 @@ set -euo pipefail
 : "${DEPLOY_IPV4:?DEPLOY_IPV4 is required}"
 : "${OWNER_EMAIL:?OWNER_EMAIL is required}"
 
-OWNER_PASSWORD="$(cat)"
-if [ ${#OWNER_PASSWORD} -lt 12 ] || [ ${#OWNER_PASSWORD} -gt 128 ]; then
-  echo "SYSTEM_OWNER_PASSWORD must be between 12 and 128 characters" >&2
-  exit 1
-fi
-trap 'unset OWNER_PASSWORD' EXIT
-
 cd "$APP_DIR"
 umask 077
 
 test -f compose.production.yml
 test -f deploy/Caddyfile.tjekatjeka
-test -f deploy/provision_tjekatjeka_auth.py
 docker network inspect ithute_ithute >/dev/null
 
 DB_PASSWORD=""
@@ -56,17 +48,10 @@ fi
 compose pull
 compose up -d --remove-orphans
 
-AUTH_CONTAINER="$(docker ps --filter label=com.docker.compose.project=ithute --filter label=com.docker.compose.service=ithute-auth -q | head -n1)"
 APP_API_CONTAINER="$(docker ps --filter label=com.docker.compose.project=ithute --filter label=com.docker.compose.service=ithute-app-api -q | head -n1)"
 CADDY_CONTAINER="$(docker ps --filter label=com.docker.compose.project=ithute --filter label=com.docker.compose.service=caddy -q | head -n1)"
-test -n "$AUTH_CONTAINER"
 test -n "$APP_API_CONTAINER"
 test -n "$CADDY_CONTAINER"
-
-docker cp deploy/provision_tjekatjeka_auth.py "$AUTH_CONTAINER:/tmp/provision_tjekatjeka_auth.py"
-printf '%s' "$OWNER_PASSWORD" | docker exec -i -e "TJEKATJEKA_ADMIN_EMAIL=$OWNER_EMAIL" "$AUTH_CONTAINER" python /tmp/provision_tjekatjeka_auth.py
-docker exec "$AUTH_CONTAINER" rm -f /tmp/provision_tjekatjeka_auth.py
-unset OWNER_PASSWORD
 
 # Publish the product hostname through Ithute's authoritative PowerDNS.
 docker exec -i "$APP_API_CONTAINER" python - "$DEPLOY_IPV4" <<'PY'
