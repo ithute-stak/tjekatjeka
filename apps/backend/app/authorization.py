@@ -2,12 +2,13 @@ import uuid
 from collections.abc import Callable
 
 from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .auth import current_claims
 from .config import settings
-from .db import get_db
+from .db import SessionLocal, get_db
 from .models import Profile
 
 ALLOWED_ROLES = {
@@ -47,10 +48,7 @@ WRITE_PERMISSIONS = [
 ]
 
 
-def current_profile(
-    claims: dict = Depends(current_claims),
-    db: Session = Depends(get_db),
-) -> Profile:
+def _resolve_profile(claims: dict, db: Session) -> Profile:
     auth_user_id = uuid.UUID(str(claims["sub"]))
     email_value = claims.get("email")
     email = str(email_value).strip().lower() if email_value else None
@@ -68,6 +66,13 @@ def current_profile(
         profile.email_snapshot = email
         db.commit()
     return profile
+
+
+def current_profile(
+    claims: dict = Depends(current_claims),
+    db: Session = Depends(get_db),
+) -> Profile:
+    return _resolve_profile(claims, db)
 
 
 def require_roles(*roles: str) -> Callable:
@@ -93,3 +98,25 @@ def enforce_route_permission(request: Request, profile: Profile = Depends(curren
     if profile.role not in allowed:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your Tjekatjeka role cannot modify this module")
     return profile
+
+
+def authorize_api_request(request: Request) -> Profile | None:
+    if not request.url.path.startswith("/api/v1"):
+        return None
+    header = request.headers.get("authorization", "")
+    credentials = None
+    if header:
+        scheme, _, token = header.partition(" ")
+        if scheme.lower() != "bearer" or not token:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+        credentials = HTTPAuthorizationCredentials(scheme=scheme, credentials=token)
+    claims = current_claims(credentials)
+    with SessionLocal() as db:
+        profile = _resolve_profile(claims, db)
+        if request.method not in {"GET", "HEAD", "OPTIONS"}:
+            for prefix, roles in WRITE_PERMISSIONS:
+                if request.url.path.startswith(prefix):
+                    if profile.role not in roles:
+                        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your Tjekatjeka role cannot modify this module")
+                    break
+        return profile
